@@ -33,8 +33,6 @@ CHIP Memory {
 	Or(a=load,b=notload,out=one);
 
 	// Push the one to the proper selector
-//	DMux(in=one,a=r0,b=r1a,sel=address[0]);
-//	DMux(in=r1a,a=r1,b=r2,sel=address[1]);
 	DMux4Way(in=one,a=r0a,b=r0b,c=r1,d=r2,sel=address[13..14]);
 	Or(a=r0a,b=r0b,out=r0);
 
@@ -50,7 +48,5 @@ CHIP Memory {
 	Mux16(a=reg1,b=in,sel=loadr1,out=regin1);
 
 	// Push the output
-//	Mux16(a=reg1,b=reg2,sel=address[1],out=reg1a);
-//	Mux16(a=reg0,b=reg1a,sel=address[0],out=out);
 	Mux4Way16(a=reg0,b=reg0,c=reg1,d=reg2,sel=address[13..14],out=out);
 }

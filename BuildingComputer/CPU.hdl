@@ -1,0 +1,100 @@
+// This file is part of the materials accompanying the book 
+// "The Elements of Computing Systems" by Nisan and Schocken, 
+// MIT Press. Book site: www.idc.ac.il/tecs
+// File name: projects/05/CPU.hdl
+
+/**
+ * The Central Processing unit (CPU).
+ * Consists of an ALU and a set of registers, designed to fetch and 
+ * execute instructions written in the Hack machine language.
+ * In particular, functions as follows:
+ * Executes the inputted instruction according to the Hack machine 
+ * language specification. The D and A in the language specification
+ * refer to CPU-resident registers, while M refers to the external
+ * memory location addressed by A, i.e. to Memory[A]. The inM input 
+ * holds the value of this location. If the current instruction needs 
+ * to write a value to M, the value is placed in outM, the address 
+ * of the target location is placed in the addressM output, and the 
+ * writeM control bit is asserted. (When writeM=0, any value may 
+ * appear in outM). The outM and writeM outputs are combinational: 
+ * they are affected instantaneously by the execution of the current 
+ * instruction. The addressM and pc outputs are clocked: although they 
+ * are affected by the execution of the current instruction, they commit 
+ * to their new values only in the next time unit. If reset=1 then the 
+ * CPU jumps to address 0 (i.e. sets pc=0 in next time unit) rather 
+ * than to the address resulting from executing the current instruction. 
+ */
+
+CHIP CPU {
+
+    IN  inM[16],         // M value input  (M = contents of RAM[A])
+        instruction[16], // Instruction for execution
+        reset;           // Signals whether to re-start the current
+                         // program (reset=1) or continue executing
+                         // the current program (reset=0).
+
+    OUT outM[16],        // M value output
+        writeM,          // Write into M? 
+        addressM[15],    // Address in data memory (of M)
+        pc[15];          // address of next instruction
+
+    PARTS:
+    // Implementation missing.
+	// 111accccccdddjjj
+	// a, c = function
+	// d = output location
+	// j = jump
+
+	// if instruction[15] == 0
+	// store in 0..14 in A
+	// (Actually, can store the whole thing, since the last is 0 anyhow)
+
+	// if instruction[12] == 0, use A.  If == 1, use M.
+
+	Not(in=instruction[15], out=isavalue);
+	Not(in=reset, out=pcload1);
+	And(a=pcload1, b=instruction[15], out=pcload2);
+	Or(a=pcload2, b=isavalue, out=pcload);
+
+	PC(in=pcin, load=pcload, reset=reset, out=pcout, out[0..14]=pc);
+
+	Mux16(a=aout, b=inM, sel=instruction[12], out=aluyin);
+
+	ALU(x=aluxin, y=aluyin, zx=instruction[11], nx=instruction[10], zy=instruction[9], ny=instruction[8], f=instruction[7], no=instruction[6], out=aluout, zr=aluzero, ng=aluneg);
+
+	// Determine where to store ALU output
+	And(a=instruction[15], b=instruction[3], out=loadm);
+	And(a=instruction[15], b=instruction[4], out=loadd);
+	And(a=instruction[15], b=instruction[5], out=loada1);
+	Not(in=instruction[15], out=loada2);
+	Or(a=loada1, b=loada2, out=loada);
+
+	// Store ALU output
+	DRegister(in=aluout, load=loadd, out=dout, out=aluxin);
+	// A
+	Mux16(a=aluout, b=instruction, sel=isavalue, out=avalue);
+	ARegister(in=avalue, load=loada, out=aout, out[0..14]=addressM);
+	// M
+	And(a=loadm, b=loadm, out=writeM);
+	And16(a=aluout, b=aluout, out=outM);
+
+	// Determine when to jump
+	And(a=aluneg, b=instruction[2], out=jmplt);
+	And(a=aluzero, b=instruction[1], out=jmpeq);
+	Not(in=aluneg, out=alupos);
+	And(a=alupos, b=instruction[0], out=jmpgt);
+
+	Or(a=jmplt, b=jmpeq, out=dojmp1);
+	Or(a=dojmp1, b=jmpgt, out=dojmp2);
+	And(a=dojmp2, b=instruction[15], out=dojmp);
+
+	// JMP
+	Mux16(a=pcout, b=aout, sel=jmplt, out=jmp1);
+	Mux16(a=jmp1, b=aout, sel=jmpeq, out=jmp2);
+	Mux16(a=jmp2, b=aout, sel=jmpgt, out=jmp3);
+
+	Inc16(in=pcout, out=pcinc);
+	Mux16(a=pcinc, b=jmp3, sel=dojmp, out=pcin);
+
+}
+

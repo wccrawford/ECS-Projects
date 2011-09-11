@@ -8,3 +8,4 @@ compiler = new hackCompiler
 
 compiled = compiler.compile args[0]
 
+compiler.saveFile args[1], compiled

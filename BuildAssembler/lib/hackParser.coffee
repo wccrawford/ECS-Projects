@@ -2,36 +2,36 @@
 
 class exports.hackParser
 	constructor: ->
-		@symbols = [
-			"SP": 0,
-			"LCL": 1,
-			"ARG": 2,
-			"THIS": 3,
-			"THAT": 4,
-			"R0": 0,
-			"R1": 1,
-			"R2": 2,
-			"R3": 3,
-			"R4": 4,
-			"R5": 5,
-			"R6": 6,
-			"R7": 7,
-			"R8": 8,
-			"R9": 9,
-			"R10": 10,
-			"R11": 11,
-			"R12": 12,
-			"R13": 13,
-			"R14": 14,
-			"R15": 15,
-			"SCREEN": 16384,
-			"KBD": 24576,
-		]
+		@symbols = {
+			SP: 0,
+			LCL: 1,
+			ARG: 2,
+			THIS: 3,
+			THAT: 4,
+			R0: 0,
+			R1: 1,
+			R2: 2,
+			R3: 3,
+			R4: 4,
+			R5: 5,
+			R6: 6,
+			R7: 7,
+			R8: 8,
+			R9: 9,
+			R10: 10,
+			R11: 11,
+			R12: 12,
+			R13: 13,
+			R14: 14,
+			R15: 15,
+			SCREEN: 16384,
+			KBD: 24576,
+		}
 
 	@freeLocation = 16
 
 	addSymbol: (symbol, value=null) ->
-		return if @symbols.indexOf(symbol) != -1
+		return @symbols[symbol] if @symbols[symbol] != undefined
 
 		if value == null
 			value = @freeLocation
@@ -48,12 +48,22 @@ class exports.hackParser
 			for cmNum, instruction of instructions
 				@parseInstruction instruction
 
+		for insNumber, instruction of @instructions
+			if instruction.value == null
+				continue
+
+			if !@isNumeric instruction.value
+				console.log instruction.value
+				@instructions[insNumber].value = @addSymbol instruction.value
+				console.log @instructions[insNumber].value
+
 		console.log @instructions
 		compiled = []
 		for insNumber, instruction of @instructions
 			compiled.push instruction.compile()
 
 		console.log compiled
+		console.log @symbols
 		return compiled
 	
 	parseInstruction: (line) ->
@@ -65,7 +75,7 @@ class exports.hackParser
 				instruction.value = line[1..]
 				@instructions.push instruction
 			when '('
-				symbol = line.replace /[()]/, ""
+				symbol = line.replace /[()]/g, ""
 				@addSymbol symbol, @instructions.length
 			else
 				if line.indexOf('=') != -1
@@ -75,7 +85,7 @@ class exports.hackParser
 						instruction.store.push char
 					instruction.calculation = eqSplit[1]
 					@instructions.push instruction
-				if line[0] == 'J'
+				else if line[0] == 'J'
 					instruction = @instructions[@instructions.length-1]
 					instruction.jmp = switch line
 						when "JGT" then ['gt']
@@ -86,6 +96,7 @@ class exports.hackParser
 						when "JMP" then ['lt', 'eq', 'gt']
 				else
 					instruction = new hackInstruction line
+					instruction.calculation = line
 					@instructions.push instruction
 
 	stripComments: (contents) ->
@@ -98,4 +109,7 @@ class exports.hackParser
 
 	trim: (str) ->
 		str.replace /^\s+|\s+$/, ""
+	
+	isNumeric: (str) ->
+		!isNaN(parseFloat(str)) && isFinite(str)
 

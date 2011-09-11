@@ -1,6 +1,44 @@
 {hackInstruction} = require './hackInstruction'
 
 class exports.hackParser
+	constructor: ->
+		@symbols = [
+			"SP": 0,
+			"LCL": 1,
+			"ARG": 2,
+			"THIS": 3,
+			"THAT": 4,
+			"R0": 0,
+			"R1": 1,
+			"R2": 2,
+			"R3": 3,
+			"R4": 4,
+			"R5": 5,
+			"R6": 6,
+			"R7": 7,
+			"R8": 8,
+			"R9": 9,
+			"R10": 10,
+			"R11": 11,
+			"R12": 12,
+			"R13": 13,
+			"R14": 14,
+			"R15": 15,
+			"SCREEN": 16384,
+			"KBD": 24576,
+		]
+
+	@freeLocation = 16
+
+	addSymbol: (symbol, value=null) ->
+		return if @symbols.indexOf(symbol) != -1
+
+		if value == null
+			value = @freeLocation
+			@freeLocation++
+
+		@symbols[symbol] = value
+
 	parse: (lines) ->
 		lines = @stripComments lines
 
@@ -19,19 +57,33 @@ class exports.hackParser
 		return compiled
 	
 	parseInstruction: (line) ->
+		line = @trim line
+
 		switch line[0]
 			when '@'
 				instruction = new hackInstruction line
 				instruction.value = line[1..]
 				@instructions.push instruction
+			when '('
+				symbol = line.replace /[()]/, ""
+				@addSymbol symbol, @instructions.length
 			else
-				if line.indexOf '=' != -1
+				if line.indexOf('=') != -1
 					instruction = new hackInstruction line
 					eqSplit = line.split '='
 					for charNum, char of eqSplit[0]
 						instruction.store.push char
 					instruction.calculation = eqSplit[1]
 					@instructions.push instruction
+				if line[0] == 'J'
+					instruction = @instructions[@instructions.length-1]
+					instruction.jmp = switch line
+						when "JGT" then ['gt']
+						when "JGE" then ['gt', 'eq']
+						when "JLT" then ['lt']
+						when "JLE" then ['lt', 'eq']
+						when "JEQ" then ['eq']
+						when "JMP" then ['lt', 'eq', 'gt']
 				else
 					instruction = new hackInstruction line
 					@instructions.push instruction

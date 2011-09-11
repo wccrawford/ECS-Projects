@@ -37,9 +37,10 @@ class exports.hackInstruction
 		(if @store.indexOf('M') != -1 then '1' else '0')
 	
 	aluBits: ->
-		calculation = @calculation.replace(/\s/, "")
+		if @calculation != null
+			calculation = @calculation.replace(/\s/, "")
 
-		switch calculation
-			when 'D' then '0001100'
-			when 'A' then '0110000'
-			when 'D+A' then '0000010'
+			switch calculation
+				when 'D' then '0001100'
+				when 'A' then '0110000'
+				when 'D+A' then '0000010'
